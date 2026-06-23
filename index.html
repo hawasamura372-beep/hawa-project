@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FloodWatch SL – Flood Monitoring & Early Warning</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+:root {
+  --bg: #04100e;
+  --bg2: #071a16;
+  --bg3: #0a2320;
+  --teal: #00c896;
+  --teal-dim: #00c89622;
+  --teal-mid: #00c89655;
+  --teal-dark: #009970;
+  --amber: #f59e0b;
+  --amber-pale: #f59e0b18;
+  --red: #ef4444;
+  --red-pale: #ef444418;
+  --emerald: #10b981;
+  --emerald-pale: #10b98118;
+  --white: #f0faf7;
+  --text: #d4ede8;
+  --text-dim: #6b9e94;
+  --text-mid: #a8d4cc;
+  --border: #0f3028;
+  --border-bright: #00c89633;
+  --radius: 14px;
+  --radius-sm: 7px;
+  --shadow: 0 4px 24px rgba(0,200,150,0.08);
+  --shadow-lg: 0 12px 48px rgba(0,200,150,0.14);
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font); color: var(--text); background: var(--bg); overflow-x: hidden; }
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; }
+
+/* ── NAV ── */
+.navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: rgba(4,16,14,0.9); backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--border); transition: all 0.3s;
+}
+.navbar.scrolled { border-color: var(--border-bright); box-shadow: var(--shadow); }
+.nav-inner {
+  max-width: 1280px; margin: 0 auto; padding: 0 28px; height: 66px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo { display: flex; align-items: center; gap: 10px; }
+.logo-mark {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--teal), var(--emerald));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; box-shadow: 0 0 16px var(--teal-mid);
+}
+.logo-text {
+  font-size: 1.1rem; font-weight: 700; color: var(--white);
+  letter-spacing: -0.3px;
+}
+.logo-text span { color: var(--teal); }
+.nav-links { display: flex; gap: 2px; align-items: center; }
+.nav-link {
+  font-size: 0.83rem; font-weight: 500; padding: 7px 14px;
+  border-radius: var(--radius-sm); color: var(--text-dim); transition: all 0.2s;
+}
+.nav-link:hover, .nav-link.active { color: var(--teal); background: var(--teal-dim); }
+.nav-emergency {
+  background: var(--red) !important; color: white !important;
+  border-radius: 50px !important; font-weight: 600 !important;
+  font-size: 0.78rem !important; letter-spacing: 0.5px;
+  animation: pulse-red 2s infinite;
+}
+@keyframes pulse-red { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.5)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }
+.hamburger { display:none; flex-direction:column; gap:5px; background:none; border:none; cursor:pointer; padding:4px; }
+.hamburger span { display:block; width:22px; height:2px; background:var(--teal); border-radius:2px; transition:all 0.3s; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-block; padding: 12px 26px; border-radius: 8px;
+  font-family: var(--font); font-size: 0.88rem; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.25s; letter-spacing: 0.3px;
+}
+.btn-teal { background: var(--teal); color: var(--bg); box-shadow: 0 0 20px var(--teal-mid); }
+.btn-teal:hover { background: var(--emerald); transform: translateY(-2px); box-shadow: 0 0 32px var(--teal-mid); }
+.btn-ghost { background: transparent; color: var(--teal); border: 1px solid var(--border-bright); }
+.btn-ghost:hover { background: var(--teal-dim); transform: translateY(-2px); }
+.btn-amber { background: var(--amber); color: #000; font-weight: 700; }
+.btn-amber:hover { filter: brightness(1.1); transform: translateY(-2px); }
+.btn-red { background: var(--red); color: white; font-weight: 700; }
+.btn-red:hover { filter: brightness(1.1); transform: translateY(-2px); }
+.full { width: 100%; text-align: center; }
+
+/* ── ALERT BANNER ── */
+.alert-banner {
+  background: linear-gradient(90deg, var(--red), #b91c1c);
+  padding: 10px 28px; display: flex; align-items: center;
+  justify-content: center; gap: 16px; flex-wrap: wrap;
+  margin-top: 66px;
+}
+.ab-icon { font-size: 1rem; animation: shake 0.5s infinite alternate; }
+@keyframes shake { 0%{transform:rotate(-5deg)} 100%{transform:rotate(5deg)} }
+.ab-text { font-family: var(--mono); font-size: 0.78rem; font-weight: 600; color: white; letter-spacing: 0.5px; }
+.ab-tag {
+  background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px; padding: 3px 10px;
+  font-family: var(--mono); font-size: 0.72rem; color: white; font-weight: 600;
+}
+
+/* ── HERO ── */
+.hero {
+  background: var(--bg);
+  padding: 60px 28px 80px;
+  position: relative; overflow: hidden;
+  min-height: calc(100vh - 66px - 41px);
+  display: flex; align-items: center;
+}
+.hero-bg-lines {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0.06;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 47px,
+    var(--teal) 47px, var(--teal) 48px
+  );
+}
+.hero-inner {
+  max-width: 1280px; width: 100%; margin: 0 auto;
+  display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 56px;
+  align-items: center; position: relative; z-index: 1;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--mono); font-size: 0.72rem; font-weight: 500;
+  color: var(--teal); background: var(--teal-dim);
+  border: 1px solid var(--border-bright);
+  padding: 6px 14px; border-radius: 50px; margin-bottom: 24px;
+  letter-spacing: 0.5px;
+}
+.live-dot { width: 7px; height: 7px; background: var(--teal); border-radius: 50%; animation: blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+.hero-title {
+  font-size: clamp(2.8rem, 5.5vw, 5rem);
+  font-weight: 700; line-height: 1.06;
+  color: var(--white); margin-bottom: 20px; letter-spacing: -1.5px;
+}
+.hero-title span { color: var(--teal); }
+.hero-sub { font-size: 0.97rem; color: var(--text-mid); line-height: 1.8; margin-bottom: 36px; max-width: 440px; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 44px; }
+.hero-counters { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.hc-box {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px; text-align: center;
+}
+.hc-num { font-family: var(--mono); font-size: 1.5rem; font-weight: 600; color: var(--teal); display: block; }
+.hc-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; display: block; letter-spacing: 0.5px; }
+
+/* ── GAUGE PANEL ── */
+.gauge-panel {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden;
+  box-shadow: var(--shadow-lg);
+}
+.gp-header {
+  background: var(--bg3); padding: 13px 18px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+}
+.gp-title { font-family: var(--mono); font-size: 0.75rem; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; }
+.gp-status { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 0.7rem; color: var(--teal); font-weight: 600; }
+.gp-body { padding: 20px; }
+
+/* Rainfall gauge */
+.rain-gauge-wrap { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 20px; }
+.rain-tube {
+  width: 48px; border-radius: 6px; overflow: hidden;
+  background: var(--bg3); border: 1px solid var(--border);
+  position: relative; flex-shrink: 0;
+}
+.rain-tube-label { font-family: var(--mono); font-size: 0.62rem; color: var(--text-dim); text-align: center; padding: 4px 0; }
+.rain-fill {
+  border-radius: 4px 4px 0 0;
+  position: relative; overflow: hidden;
+  transition: height 2s ease;
+}
+.rain-fill::after {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    180deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 2px,
+    transparent 2px, transparent 6px
+  );
+}
+.rf-red { background: linear-gradient(180deg, #ef4444, #b91c1c); }
+.rf-amber { background: linear-gradient(180deg, var(--amber), #d97706); }
+.rf-teal { background: linear-gradient(180deg, var(--teal), var(--teal-dark)); }
+.rain-info { flex: 1; }
+.ri-location { font-weight: 600; font-size: 0.88rem; color: var(--white); margin-bottom: 4px; }
+.ri-reading { font-family: var(--mono); font-size: 1.6rem; font-weight: 600; margin-bottom: 4px; }
+.ri-reading.red { color: var(--red); }
+.ri-reading.amber { color: var(--amber); }
+.ri-reading.teal { color: var(--teal); }
+.ri-status { font-family: var(--mono); font-size: 0.68rem; font-weight: 600; padding: 3px 9px; border-radius: 4px; display: inline-block; text-transform: uppercase; }
+.ri-status.red { background: var(--red-pale); color: var(--red); }
+.ri-status.amber { background: var(--amber-pale); color: var(--amber); }
+.ri-status.teal { background: var(--emerald-pale); color: var(--emerald); }
+
+/* mini sensor list */
+.sensor-mini { display: flex; flex-direction: column; gap: 8px; }
+.sm-row {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg3); border-radius: var(--radius-sm); padding: 9px 12px;
+  border: 1px solid var(--border); gap: 8px;
+}
+.sm-name { font-size: 0.8rem; font-weight: 600; color: var(--text); flex: 1; }
+.sm-bar-wrap { width: 70px; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.sm-bar { height: 100%; border-radius: 2px; }
+.sm-bar.red { background: var(--red); }
+.sm-bar.amber { background: var(--amber); }
+.sm-bar.ok { background: var(--teal); }
+.sm-val { font-family: var(--mono); font-size: 0.78rem; font-weight: 600; min-width: 36px; text-align: right; }
+.sm-val.red { color: var(--red); }
+.sm-val.amber { color: var(--amber); }
+.sm-val.ok { color: var(--teal); }
+.gp-footer {
+  border-top: 1px solid var(--border); padding: 11px 18px;
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 0.7rem; color: var(--text-dim);
+}
+.gp-footer span { color: var(--teal); }
+
+/* ── WEATHER WIDGET ── */
+.weather { background: var(--bg2); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); padding: 0; }
+.weather-strip {
+  max-width: 1280px; margin: 0 auto; padding: 28px 28px;
+  display: grid; grid-template-columns: auto 1fr; gap: 32px; align-items: center;
+}
+.ws-label { font-family: var(--mono); font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+.ws-title { font-size: 1rem; font-weight: 700; color: var(--white); }
+.weather-cards { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+.weather-cards::-webkit-scrollbar { height: 4px; }
+.weather-cards::-webkit-scrollbar-track { background: var(--border); border-radius: 2px; }
+.weather-cards::-webkit-scrollbar-thumb { background: var(--teal-mid); border-radius: 2px; }
+.w-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 18px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; min-width: 110px; flex-shrink: 0; transition: border-color 0.2s;
+}
+.w-card:hover { border-color: var(--border-bright); }
+.w-city { font-size: 0.72rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+.w-icon { font-size: 1.6rem; }
+.w-temp { font-family: var(--mono); font-size: 1.1rem; font-weight: 600; color: var(--white); }
+.w-rain { font-family: var(--mono); font-size: 0.7rem; color: var(--teal); }
+.w-risk { font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 50px; text-transform: uppercase; letter-spacing: 0.5px; }
+.w-risk.high { background: var(--red-pale); color: var(--red); }
+.w-risk.med { background: var(--amber-pale); color: var(--amber); }
+.w-risk.low { background: var(--emerald-pale); color: var(--emerald); }
+
+/* ── SECTIONS ── */
+.section { padding: 96px 28px; }
+.container { max-width: 1280px; margin: 0 auto; }
+.eyebrow {
+  font-family: var(--mono); font-size: 0.7rem; font-weight: 500;
+  color: var(--teal); letter-spacing: 2.5px; text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+}
+.eyebrow::before { content:'//'; color: var(--border-bright); font-weight: 400; }
+.section-title {
+  font-size: clamp(1.9rem, 3.5vw, 2.8rem); font-weight: 700;
+  color: var(--white); line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 14px;
+}
+.section-title span { color: var(--teal); }
+.section-sub { font-size: 0.95rem; color: var(--text-dim); line-height: 1.8; max-width: 520px; }
+
+/* ── ABOUT ── */
+.about { background: var(--bg); }
+.about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center; }
+.about-vis {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 32px; position: relative; overflow: hidden;
+}
+.about-vis::before {
+  content: ''; position: absolute; top: -40px; right: -40px;
+  width: 160px; height: 160px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,200,150,0.08), transparent);
+}
+.timeline { display: flex; flex-direction: column; gap: 0; }
+.tl-item { display: flex; gap: 16px; position: relative; }
+.tl-item:not(:last-child)::after {
+  content: ''; position: absolute; left: 14px; top: 28px;
+  width: 2px; height: 100%; background: var(--border);
+}
+.tl-dot {
+  width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700; position: relative; z-index: 1; margin-top: 2px;
+}
+.tl-dot.red { background: var(--red-pale); color: var(--red); border: 1px solid var(--red); }
+.tl-dot.amber { background: var(--amber-pale); color: var(--amber); border: 1px solid var(--amber); }
+.tl-dot.teal { background: var(--emerald-pale); color: var(--teal); border: 1px solid var(--teal); }
+.tl-content { padding: 0 0 28px; flex: 1; }
+.tl-label { font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px; }
+.tl-title { font-weight: 600; font-size: 0.95rem; color: var(--white); margin-bottom: 6px; }
+.tl-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.7; }
+.about-text p { color: var(--text-mid); line-height: 1.85; margin-bottom: 14px; font-size: 0.95rem; }
+.feature-pills { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.feature-pill {
+  background: var(--teal-dim); border: 1px solid var(--border-bright);
+  color: var(--teal); border-radius: 50px;
+  padding: 6px 14px; font-size: 0.78rem; font-weight: 500;
+}
+
+/* ── ALERT LEVELS ── */
+.alerts { background: var(--bg2); border-top: 1px solid var(--border); }
+.alert-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; margin-bottom: 40px; }
+.alert-card {
+  border-radius: var(--radius); padding: 28px 24px; border: 1px solid;
+  position: relative; overflow: hidden;
+}
+.alert-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+.alert-card.green { border-color: rgba(16,185,129,0.3); background: rgba(16,185,129,0.05); }
+.alert-card.green::before { background: var(--emerald); }
+.alert-card.amber { border-color: rgba(245,158,11,0.3); background: rgba(245,158,11,0.05); }
+.alert-card.amber::before { background: var(--amber); }
+.alert-card.red { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+.alert-card.red::before { background: var(--red); }
+.ac-level { font-family: var(--mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+.alert-card.green .ac-level { color: var(--emerald); }
+.alert-card.amber .ac-level { color: var(--amber); }
+.alert-card.red .ac-level { color: var(--red); }
+.ac-name { font-size: 1.1rem; font-weight: 700; color: var(--white); margin-bottom: 10px; }
+.ac-range { font-family: var(--mono); font-size: 0.88rem; font-weight: 600; margin-bottom: 12px; }
+.alert-card.green .ac-range { color: var(--emerald); }
+.alert-card.amber .ac-range { color: var(--amber); }
+.alert-card.red .ac-range { color: var(--red); }
+.ac-desc { font-size: 0.82rem; color: var(--text-dim); line-height: 1.7; }
+.ac-action { margin-top: 14px; font-size: 0.78rem; font-weight: 700; padding: 6px 14px; border-radius: 4px; display: inline-block; }
+.alert-card.green .ac-action { background: var(--emerald-pale); color: var(--emerald); }
+.alert-card.amber .ac-action { background: var(--amber-pale); color: var(--amber); }
+.alert-card.red .ac-action { background: var(--red-pale); color: var(--red); }
+
+/* SMS ALERT SIGNUP */
+.sms-box {
+  background: linear-gradient(135deg, var(--bg3), rgba(0,200,150,0.06));
+  border: 1px solid var(--border-bright); border-radius: var(--radius);
+  padding: 36px 40px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap;
+}
+.sms-left { flex: 1; min-width: 280px; }
+.sms-left h3 { font-size: 1.2rem; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+.sms-left p { font-size: 0.88rem; color: var(--text-dim); line-height: 1.7; }
+.sms-form { display: flex; gap: 10px; flex-wrap: wrap; min-width: 280px; }
+.sms-form input {
+  flex: 1; min-width: 160px; padding: 11px 16px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-family: var(--font); font-size: 0.88rem; outline: none;
+  transition: border-color 0.2s;
+}
+.sms-form input:focus { border-color: var(--teal); }
+
+/* ── SERVICES ── */
+.services { background: var(--bg); border-top: 1px solid var(--border); }
+.services-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 20px; }
+.svc-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px;
+  transition: all 0.3s; position: relative; overflow: hidden;
+}
+.svc-card::after {
+  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--teal), var(--emerald));
+  transform: scaleX(0); transition: transform 0.3s; transform-origin: left;
+}
+.svc-card:hover { border-color: var(--border-bright); transform: translateY(-4px); box-shadow: var(--shadow); }
+.svc-card:hover::after { transform: scaleX(1); }
+.svc-icon { font-size: 2rem; margin-bottom: 16px; display: block; }
+.svc-tag { font-family: var(--mono); font-size: 0.63rem; color: var(--teal); text-transform: uppercase; letter-spacing: 2px; font-weight: 600; margin-bottom: 8px; }
+.svc-card h3 { font-size: 0.97rem; font-weight: 700; color: var(--white); margin-bottom: 10px; }
+.svc-card p { font-size: 0.83rem; color: var(--text-dim); line-height: 1.72; }
+
+/* ── DISTRICTS ── */
+.districts { background: var(--bg2); border-top: 1px solid var(--border); }
+.districts-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; flex-wrap: wrap; gap: 16px; }
+.legend { display: flex; gap: 16px; flex-wrap: wrap; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-dim); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend-dot.red { background: var(--red); }
+.legend-dot.amber { background: var(--amber); }
+.legend-dot.green { background: var(--teal); }
+.districts-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 28px; }
+.district-card {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 16px 14px;
+  transition: all 0.2s; cursor: pointer;
+}
+.district-card:hover { border-color: var(--border-bright); transform: translateY(-2px); }
+.district-card.d-red { border-left: 3px solid var(--red); }
+.district-card.d-amber { border-left: 3px solid var(--amber); }
+.district-card.d-green { border-left: 3px solid var(--teal); }
+.dc-row1 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.dc-name { font-size: 0.83rem; font-weight: 600; color: var(--white); }
+.dc-badge { font-family: var(--mono); font-size: 0.6rem; font-weight: 700; padding: 2px 7px; border-radius: 3px; text-transform: uppercase; }
+.dc-badge.red { background: var(--red-pale); color: var(--red); }
+.dc-badge.amber { background: var(--amber-pale); color: var(--amber); }
+.dc-badge.green { background: var(--emerald-pale); color: var(--teal); }
+.dc-bar-wrap { height: 5px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+.dc-bar { height: 100%; border-radius: 3px; }
+.dc-bar.red { background: var(--red); }
+.dc-bar.amber { background: var(--amber); }
+.dc-bar.green { background: var(--teal); }
+.dc-reading { font-family: var(--mono); font-size: 0.68rem; color: var(--text-dim); display: flex; justify-content: space-between; }
+.district-summary {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 16px 20px;
+  display: flex; gap: 32px; flex-wrap: wrap; align-items: center;
+}
+.ds-item { text-align: center; }
+.ds-num { font-family: var(--mono); font-size: 1.4rem; font-weight: 600; display: block; }
+.ds-num.red { color: var(--red); }
+.ds-num.amber { color: var(--amber); }
+.ds-num.green { color: var(--teal); }
+.ds-label { font-size: 0.73rem; color: var(--text-dim); }
+
+/* ── REPORT / REGISTER ── */
+.register { background: var(--bg); border-top: 1px solid var(--border); }
+.reg-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: start; }
+.reg-info p { color: var(--text-mid); line-height: 1.85; margin-bottom: 28px; }
+.info-list { display: flex; flex-direction: column; gap: 14px; }
+.il-item {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+}
+.il-icon { font-size: 1.2rem; flex-shrink: 0; }
+.il-text strong { display: block; font-weight: 700; color: var(--white); font-size: 0.86rem; margin-bottom: 3px; }
+.il-text span { font-size: 0.78rem; color: var(--text-dim); line-height: 1.5; }
+.reg-form {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 36px 32px;
+}
+.reg-form h3 { font-size: 1.3rem; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+.reg-form > p { font-size: 0.82rem; color: var(--text-dim); margin-bottom: 26px; }
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; font-family: var(--mono); font-size: 0.7rem; font-weight: 500; color: var(--text-dim); margin-bottom: 7px; text-transform: uppercase; letter-spacing: 1.5px; }
+.form-group input,
+.form-group select,
+.form-group textarea {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-family: var(--font); font-size: 0.88rem;
+  outline: none; transition: border-color 0.2s;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus { border-color: var(--teal); }
+.form-group select option { background: var(--bg3); }
+.form-group textarea { resize: vertical; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.error-msg { display: block; font-family: var(--mono); font-size: 0.7rem; color: var(--red); margin-top: 4px; min-height: 16px; }
+.form-note { text-align: center; font-size: 0.78rem; color: var(--text-dim); margin-top: 12px; }
+.form-note a { color: var(--teal); font-weight: 600; }
+
+/* ── CONTACT ── */
+.contact { background: var(--bg2); border-top: 1px solid var(--border); }
+.contact-layout { display: grid; grid-template-columns: 1fr 1.2fr; gap: 60px; }
+.contact-left p { color: var(--text-mid); line-height: 1.8; margin-bottom: 28px; }
+.cinfo-list { display: flex; flex-direction: column; gap: 12px; }
+.cinfo-item {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 14px 16px;
+}
+.ci-ico { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+.ci-text strong { display: block; font-weight: 600; color: var(--white); font-size: 0.84rem; margin-bottom: 3px; }
+.ci-text span { font-size: 0.78rem; color: var(--text-dim); }
+.cform {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 32px 28px;
+}
+.cform h3 { font-size: 1.2rem; font-weight: 700; color: var(--white); margin-bottom: 22px; }
+
+/* ── FOOTER ── */
+.footer { background: var(--bg); border-top: 1px solid var(--border); padding: 64px 28px 0; }
+.footer-inner { max-width: 1280px; margin: 0 auto; }
+.footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; padding-bottom: 48px; border-bottom: 1px solid var(--border); }
+.footer-brand .logo { margin-bottom: 14px; }
+.footer-brand p { font-size: 0.82rem; color: var(--text-dim); line-height: 1.7; max-width: 240px; }
+.footer-col strong { display: block; font-family: var(--mono); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-dim); margin-bottom: 16px; }
+.footer-col ul { display: flex; flex-direction: column; gap: 10px; }
+.footer-col a { font-size: 0.82rem; color: var(--text-dim); transition: color 0.2s; }
+.footer-col a:hover { color: var(--teal); }
+.footer-bottom {
+  padding: 20px 0; display: flex; justify-content: space-between;
+  align-items: center; flex-wrap: wrap; gap: 8px;
+  font-size: 0.76rem; color: var(--text-dim);
+}
+.footer-status { font-family: var(--mono); font-size: 0.72rem; color: var(--teal); display: flex; align-items: center; gap: 6px; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(4,16,14,0.88); backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity 0.3s;
+}
+.modal-overlay.active { opacity: 1; pointer-events: all; }
+.modal-box {
+  background: var(--bg2); border: 1px solid var(--border-bright);
+  border-radius: var(--radius); padding: 40px 36px;
+  max-width: 420px; width: 90%; text-align: center;
+  transform: translateY(16px); transition: transform 0.3s;
+  box-shadow: var(--shadow-lg);
+}
+.modal-overlay.active .modal-box { transform: translateY(0); }
+.modal-icon { font-size: 2.6rem; margin-bottom: 12px; }
+.modal-box h3 { font-size: 1.3rem; font-weight: 700; color: var(--white); margin-bottom: 10px; }
+.modal-box p { color: var(--text-dim); line-height: 1.65; margin-bottom: 24px; font-size: 0.88rem; }
+
+/* ── RESPONSIVE ── */
+@media (max-width:1024px) {
+  .services-grid { grid-template-columns:repeat(2,1fr); }
+  .districts-grid { grid-template-columns:repeat(2,1fr); }
+  .alert-grid { grid-template-columns:1fr; }
+  .footer-top { grid-template-columns:1fr 1fr; }
+}
+@media (max-width:768px) {
+  .nav-links {
+    position:fixed; top:66px; left:0; right:0;
+    background:var(--bg2); border-bottom:1px solid var(--border);
+    flex-direction:column; padding:16px; gap:4px; display:none;
+  }
+  .nav-links.open { display:flex; }
+  .nav-link { text-align:center; padding:12px; }
+  .hamburger { display:flex; }
+  .hero-inner { grid-template-columns:1fr; }
+  .gauge-panel { display:none; }
+  .about-grid { grid-template-columns:1fr; }
+  .services-grid { grid-template-columns:1fr; }
+  .districts-grid { grid-template-columns:repeat(2,1fr); }
+  .reg-layout { grid-template-columns:1fr; }
+  .contact-layout { grid-template-columns:1fr; }
+  .weather-strip { grid-template-columns:1fr; gap:16px; }
+  .section { padding:72px 20px; }
+  .hero { padding-top:56px; }
+  .form-row { grid-template-columns:1fr; }
+  .sms-box { flex-direction:column; gap:24px; }
+}
+@media (max-width:480px) {
+  .districts-grid { grid-template-columns:1fr; }
+  .footer-top { grid-template-columns:1fr; }
+  .hero-counters { grid-template-columns:1fr; }
+  .alert-grid { grid-template-columns:1fr; }
+}
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-inner">
+      <a href="#home" class="logo">
+        <div class="logo-mark">🌧</div>
+        <div class="logo-text">Flood<span>Watch</span> SL</div>
+      </a>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#home" class="nav-link active">Home</a></li>
+        <li><a href="#about" class="nav-link">About</a></li>
+        <li><a href="#alerts" class="nav-link">Alert Levels</a></li>
+        <li><a href="#services" class="nav-link">Features</a></li>
+        <li><a href="#districts" class="nav-link">Districts</a></li>
+        <li><a href="#contact" class="nav-link">Contact</a></li>
+        <li><a href="#register" class="nav-link nav-emergency">🚨 Report Flood</a></li>
+      </ul>
+      <button class="hamburger" id="hamburger"><span></span><span></span><span></span></button>
+    </div>
+  </nav>
+
+  <!-- ALERT BANNER -->
+  <div class="alert-banner">
+    <span class="ab-icon">⚠️</span>
+    <span class="ab-text">ACTIVE ALERT — Bombali District (Makeni): River level critical. Residents advised to evacuate low-lying areas immediately.</span>
+    <span class="ab-tag">LEVEL 3</span>
+    <span class="ab-tag">999 Emergency</span>
+  </div>
+
+  <!-- HERO -->
+  <section id="home" class="hero">
+    <div class="hero-bg-lines"></div>
+    <div class="hero-inner">
+      <div>
+        <div class="hero-badge"><div class="live-dot"></div>System Online · Real-Time Data</div>
+        <h1 class="hero-title">Sierra Leone<br /><span>Flood Watch</span><br />System.</h1>
+        <p class="hero-sub">Real-time flood monitoring, early warning alerts, and community reporting for all 14 districts of Sierra Leone. Know before the water rises.</p>
+        <div class="hero-actions">
+          <a href="#districts" class="btn btn-teal">View Live Data</a>
+          <a href="#alerts" class="btn btn-ghost">Alert Levels</a>
+          <a href="#register" class="btn btn-red">Report a Flood</a>
+        </div>
+        <div class="hero-counters">
+          <div class="hc-box"><span class="hc-num" data-target="14">0</span><span class="hc-label">Districts</span></div>
+          <div class="hc-box"><span class="hc-num" data-target="38">0</span><span class="hc-label">Sensors</span></div>
+          <div class="hc-box"><span class="hc-num" data-target="6200">0</span><span class="hc-label">Alerts Sent</span></div>
+        </div>
+      </div>
+
+      <!-- Gauge Panel -->
+      <div class="gauge-panel">
+        <div class="gp-header">
+          <span class="gp-title">// Rainfall & River Gauges</span>
+          <span class="gp-status"><div class="live-dot"></div>Live · 15min update</span>
+        </div>
+        <div class="gp-body">
+          <div class="rain-gauge-wrap">
+            <div class="rain-tube" style="height:160px;">
+              <div class="rain-fill rf-red" style="height:80%;"></div>
+              <div class="rain-tube-label">MKN</div>
+            </div>
+            <div class="rain-info">
+              <div class="ri-location">Rokel River – Makeni</div>
+              <div class="ri-reading red">3.2m</div>
+              <div class="ri-status red">⚠ Critical</div>
+              <div style="margin-top:8px;font-size:0.78rem;color:var(--text-dim);">Rainfall: 54mm/hr · Rising fast</div>
+            </div>
+          </div>
+          <div class="sensor-mini">
+            <div class="sm-row"><span class="sm-name">Sewa River – Bo</span><div class="sm-bar-wrap"><div class="sm-bar amber" style="width:58%"></div></div><span class="sm-val amber">2.1m</span></div>
+            <div class="sm-row"><span class="sm-name">Sierra Leone River – Freetown</span><div class="sm-bar-wrap"><div class="sm-bar amber" style="width:64%"></div></div><span class="sm-val amber">2.4m</span></div>
+            <div class="sm-row"><span class="sm-name">Moa River – Kenema</span><div class="sm-bar-wrap"><div class="sm-bar ok" style="width:28%"></div></div><span class="sm-val ok">1.0m</span></div>
+            <div class="sm-row"><span class="sm-name">Pampana River – Tonkolili</span><div class="sm-bar-wrap"><div class="sm-bar ok" style="width:22%"></div></div><span class="sm-val ok">0.8m</span></div>
+          </div>
+        </div>
+        <div class="gp-footer">
+          <span>Updated: <span>just now</span></span>
+          <span><span>2</span> alerts active</span>
+          <span><span>38</span> sensors online</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WEATHER WIDGET -->
+  <div class="weather">
+    <div class="weather-strip">
+      <div>
+        <div class="ws-label">Current Conditions</div>
+        <div class="ws-title">Live Weather · 14 Districts</div>
+      </div>
+      <div class="weather-cards">
+        <div class="w-card"><span class="w-city">Freetown</span><span class="w-icon">⛈</span><span class="w-temp">27°C</span><span class="w-rain">38mm/hr</span><span class="w-risk med">Watch</span></div>
+        <div class="w-card"><span class="w-city">Makeni</span><span class="w-icon">🌧</span><span class="w-temp">24°C</span><span class="w-rain">54mm/hr</span><span class="w-risk high">Alert</span></div>
+        <div class="w-card"><span class="w-city">Bo</span><span class="w-icon">🌦</span><span class="w-temp">26°C</span><span class="w-rain">31mm/hr</span><span class="w-risk med">Watch</span></div>
+        <div class="w-card"><span class="w-city">Kenema</span><span class="w-icon">🌤</span><span class="w-temp">28°C</span><span class="w-rain">12mm/hr</span><span class="w-risk low">Normal</span></div>
+        <div class="w-card"><span class="w-city">Kono</span><span class="w-icon">⛅</span><span class="w-temp">25°C</span><span class="w-rain">8mm/hr</span><span class="w-risk low">Normal</span></div>
+        <div class="w-card"><span class="w-city">Port Loko</span><span class="w-icon">🌧</span><span class="w-temp">26°C</span><span class="w-rain">28mm/hr</span><span class="w-risk med">Watch</span></div>
+        <div class="w-card"><span class="w-city">Kambia</span><span class="w-icon">🌤</span><span class="w-temp">27°C</span><span class="w-rain">14mm/hr</span><span class="w-risk low">Normal</span></div>
+        <div class="w-card"><span class="w-city">Tonkolili</span><span class="w-icon">⛅</span><span class="w-temp">26°C</span><span class="w-rain">6mm/hr</span><span class="w-risk low">Normal</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ABOUT -->
+  <section class="about section" id="about">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-vis">
+          <div class="eyebrow" style="margin-bottom:20px;">How It Works</div>
+          <div class="timeline">
+            <div class="tl-item">
+              <div class="tl-dot teal">1</div>
+              <div class="tl-content">
+                <div class="tl-label">Sensor Network</div>
+                <div class="tl-title">River sensors transmit live data</div>
+                <div class="tl-desc">38 water level and rainfall sensors across Sierra Leone's major rivers send readings every 15 minutes to our central system.</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot amber">2</div>
+              <div class="tl-content">
+                <div class="tl-label">AI Threshold Detection</div>
+                <div class="tl-title">System detects rising danger levels</div>
+                <div class="tl-desc">When readings cross Watch or Alert thresholds, the system automatically triggers the early warning process — no human delay.</div>
+              </div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot red">3</div>
+              <div class="tl-content">
+                <div class="tl-label">Instant Alerts</div>
+                <div class="tl-title">SMS & web alerts sent to all users</div>
+                <div class="tl-desc">Registered residents, local authorities, emergency services, and NGOs receive instant alerts — giving communities time to act.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div class="eyebrow">About FloodWatch SL</div>
+          <h2 class="section-title">Protecting Sierra Leone<br />from <span>Flood Disaster.</span></h2>
+          <p style="color:var(--text-mid);line-height:1.85;margin-bottom:14px;font-size:0.95rem;">Sierra Leone experiences devastating floods every rainy season. The 2017 Regent mudslide killed over 1,000 people. Without early warning, communities cannot prepare or evacuate in time. FloodWatch SL exists to change that.</p>
+          <p style="color:var(--text-mid);line-height:1.85;margin-bottom:20px;font-size:0.95rem;">Our network of river sensors, combined with community reporting and SMS alerts, provides the earliest possible warning — giving families, local councils, and emergency services the time they need to respond before disaster strikes.</p>
+          <div class="feature-pills">
+            <span class="feature-pill">🌊 Real-Time Sensors</span>
+            <span class="feature-pill">📲 SMS Alerts</span>
+            <span class="feature-pill">🗺 District Coverage</span>
+            <span class="feature-pill">📊 Historical Data</span>
+            <span class="feature-pill">🆓 Free Access</span>
+            <span class="feature-pill">📡 14 Districts</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ALERTS -->
+  <section class="alerts section" id="alerts">
+    <div class="container">
+      <div class="eyebrow">Alert System</div>
+      <h2 class="section-title">Three-Level <span>Warning System</span></h2>
+      <p class="section-sub" style="margin-bottom:36px;">FloodWatch SL uses internationally recognised flood alert levels adapted for Sierra Leone's river systems.</p>
+      <div class="alert-grid">
+        <div class="alert-card green">
+          <div class="ac-level">Level 1</div>
+          <div class="ac-name">🟢 Normal – Safe</div>
+          <div class="ac-range">Water level: 0 – 1.5m</div>
+          <div class="ac-desc">Rivers are within normal range. No flooding risk. Continue usual activities. Monitoring continues automatically 24/7.</div>
+          <span class="ac-action">No action needed</span>
+        </div>
+        <div class="alert-card amber">
+          <div class="ac-level">Level 2</div>
+          <div class="ac-name">🟡 Watch – Stay Alert</div>
+          <div class="ac-range">Water level: 1.5m – 2.5m</div>
+          <div class="ac-desc">Water is rising. Residents in flood-prone zones should prepare emergency bags and monitor updates. Avoid crossing rivers on foot.</div>
+          <span class="ac-action">Prepare for possible evacuation</span>
+        </div>
+        <div class="alert-card red">
+          <div class="ac-level">Level 3</div>
+          <div class="ac-name">🔴 Alert – Act Now</div>
+          <div class="ac-range">Water level: above 2.5m</div>
+          <div class="ac-desc">Critical flooding imminent or underway. Evacuate low-lying areas immediately. Move to higher ground. Call 999 for assistance.</div>
+          <span class="ac-action">Evacuate immediately</span>
+        </div>
+      </div>
+
+      <!-- SMS SIGNUP -->
+      <div class="sms-box" style="margin-top:32px;">
+        <div class="sms-left">
+          <h3>📱 Get SMS Flood Alerts — Free</h3>
+          <p>Enter your phone number to receive instant SMS warnings when flood levels rise in your district. Works on any mobile phone — no internet needed.</p>
+        </div>
+        <div class="sms-form">
+          <input type="tel" id="smsPhone" placeholder="+232 76 000 000" />
+          <select id="smsDistrict" style="padding:11px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);font-family:var(--font);font-size:0.88rem;outline:none;">
+            <option value="">Select district</option>
+            <option>Western Area</option><option>Bombali</option>
+            <option>Bo</option><option>Kenema</option>
+            <option>Kono</option><option>Port Loko</option>
+            <option>Kambia</option><option>Tonkolili</option>
+            <option>Kailahun</option><option>Moyamba</option>
+          </select>
+          <button class="btn btn-teal" onclick="handleSMS()">Subscribe →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="services section" id="services">
+    <div class="container">
+      <div style="max-width:540px;margin-bottom:48px;">
+        <div class="eyebrow">Platform Features</div>
+        <h2 class="section-title">Everything You Need to<br /><span>Stay Safe.</span></h2>
+      </div>
+      <div class="services-grid">
+        <div class="svc-card"><span class="svc-icon">📡</span><div class="svc-tag">Sensor Network</div><h3>Live River Monitoring</h3><p>38 sensors across Sierra Leone's rivers transmit water level readings every 15 minutes directly to our system.</p></div>
+        <div class="svc-card"><span class="svc-icon">📲</span><div class="svc-tag">Early Warning</div><h3>SMS & Web Alerts</h3><p>Instant automated alerts sent by SMS and web notification when levels reach Watch or Alert thresholds.</p></div>
+        <div class="svc-card"><span class="svc-icon">🌦</span><div class="svc-tag">Weather</div><h3>Live Weather Data</h3><p>Real-time rainfall, temperature, and weather forecasts for all 14 districts — updated every 15 minutes.</p></div>
+        <div class="svc-card"><span class="svc-icon">🗺️</span><div class="svc-tag">Mapping</div><h3>Flood Risk Maps</h3><p>Interactive maps showing flood-prone zones, evacuation routes, shelter locations, and historical flood data.</p></div>
+        <div class="svc-card"><span class="svc-icon">👥</span><div class="svc-tag">Community</div><h3>Citizen Reporting</h3><p>Anyone can report a flood from their phone. Reports are verified and added to the live map within minutes.</p></div>
+        <div class="svc-card"><span class="svc-icon">🏛️</span><div class="svc-tag">Government</div><h3>Authority Dashboard</h3><p>Dedicated portal for NDMA, district councils, and emergency services to coordinate flood response in real time.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DISTRICTS -->
+  <section class="districts section" id="districts">
+    <div class="container">
+      <div class="districts-header">
+        <div>
+          <div class="eyebrow">Live District Status</div>
+          <h2 class="section-title">All 14 Districts — <span>Now</span></h2>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot green"></div>Normal</div>
+          <div class="legend-item"><div class="legend-dot amber"></div>Watch</div>
+          <div class="legend-item"><div class="legend-dot red"></div>Alert</div>
+        </div>
+      </div>
+      <div class="districts-grid">
+        <div class="district-card d-amber"><div class="dc-row1"><span class="dc-name">Western Area</span><span class="dc-badge amber">Watch</span></div><div class="dc-bar-wrap"><div class="dc-bar amber" style="width:64%"></div></div><div class="dc-reading"><span>River: 2.4m</span><span>38mm/hr</span></div></div>
+        <div class="district-card d-red"><div class="dc-row1"><span class="dc-name">Bombali (Makeni)</span><span class="dc-badge red">Alert</span></div><div class="dc-bar-wrap"><div class="dc-bar red" style="width:82%"></div></div><div class="dc-reading"><span>River: 3.2m</span><span>54mm/hr</span></div></div>
+        <div class="district-card d-amber"><div class="dc-row1"><span class="dc-name">Bo</span><span class="dc-badge amber">Watch</span></div><div class="dc-bar-wrap"><div class="dc-bar amber" style="width:58%"></div></div><div class="dc-reading"><span>River: 2.1m</span><span>31mm/hr</span></div></div>
+        <div class="district-card d-green"><div class="dc-row1"><span class="dc-name">Kenema</span><span class="dc-badge green">Normal</span></div><div class="dc-bar-wrap"><div class="dc-bar green" style="width:28%"></div></div><div class="dc-reading"><span>River: 1.0m</span><span>12mm/hr</span></div></div>
+        <div class="district-card d-green"><div class="dc-row1"><span class="dc-name">Kono</span><span class="dc-badge green">Normal</span></div><div class="dc-bar-wrap"><div class="dc-bar green" style="width:22%"></div></div><div class="dc-reading"><span>River: 0.8m</span><span>8mm/hr</span></div></div>
+        <div class="district-card d-amber"><div class="dc-row1"><span class="dc-name">Port Loko</span><span class="dc-badge amber">Watch</span></div><div class="dc-bar-wrap"><div class="dc-bar amber" style="width:55%"></div></div><div class="dc-reading"><span>River: 2.0m</span><span>28mm/hr</span></div></div>
+        <div class="district-card d-green"><div class="dc-row1"><span class="dc-name">Kambia</span><span class="dc-badge green">Normal</span></div><div class="dc-bar-wrap"><div class="dc-bar green" style="width:32%"></div></div><div class="dc-reading"><span>River: 1.1m</span><span>14mm/hr</span></div></div>
+        <div class="district-card d-green"><div class="dc-row1"><span class="dc-name">Tonkolili</span><span class="dc-badge green">Normal</span></div><div class="dc-bar-wrap"><div class="dc-bar green" style="width:18%"></div></div><div class="dc-reading"><span>River: 0.7m</span><span>6mm/hr</span></div></div>
+        <div class="district-card d-green"><div class="dc-row1"><span class="dc-name">Kailahun</span><span class="dc-badge green">Normal</span></div><div class="dc-bar-wrap"><div class="dc-bar green" style="width:25%"></div></div><div class="dc-reading"><span>River: 0.9m</span><span>10mm/hr</span></div></div>
+        <div class="district-card d-amber"><div class="dc-row1"><span class="dc-name">Moyamba</span><span class="dc-badge amber">Watch</span></div><div class="dc-bar-wrap"><div class="dc-bar amber" style="width:52%"></div></div><div class="dc-reading"><span>River: 1.9m</span><span>26mm/hr</span></div></div>
+        <div class="district-card d-green"><div class="dc-row1"><span class="dc-name">Bonthe</span><span class="dc-badge green">Normal</span></div><div class="dc-bar-wrap"><div class="dc-bar green" style="width:30%"></div></div><div class="dc-reading"><span>River: 1.0m</span><span>11mm/hr</span></div></div>
+        <div class="district-card d-green"><div class="dc-row1"><span class="dc-name">Pujehun</span><span class="dc-badge green">Normal</span></div><div class="dc-bar-wrap"><div class="dc-bar green" style="width:20%"></div></div><div class="dc-reading"><span>River: 0.7m</span><span>7mm/hr</span></div></div>
+      </div>
+      <div class="district-summary">
+        <div class="ds-item"><span class="ds-num red">1</span><span class="ds-label">Alert</span></div>
+        <div class="ds-item"><span class="ds-num amber">4</span><span class="ds-label">Watch</span></div>
+        <div class="ds-item"><span class="ds-num green">9</span><span class="ds-label">Normal</span></div>
+        <div class="ds-item"><span class="ds-num" style="color:var(--text);">38</span><span class="ds-label">Sensors Online</span></div>
+        <div class="ds-item"><span class="ds-num" style="color:var(--text);">15min</span><span class="ds-label">Update Interval</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REGISTER -->
+  <section class="register section" id="register">
+    <div class="container">
+      <div class="reg-layout">
+        <div class="reg-info">
+          <div class="eyebrow">Join FloodWatch SL</div>
+          <h2 class="section-title">Register or<br /><span>Report a Flood</span></h2>
+          <p>Create a free account to receive early warning alerts for your district, or submit a flood report to help your community right now.</p>
+          <div class="info-list">
+            <div class="il-item"><span class="il-icon">🔔</span><div class="il-text"><strong>Instant Flood Alerts</strong><span>SMS and web notifications before floods reach your area</span></div></div>
+            <div class="il-item"><span class="il-icon">📊</span><div class="il-text"><strong>Live Water Level Data</strong><span>Access real-time sensor readings for your district</span></div></div>
+            <div class="il-item"><span class="il-icon">📲</span><div class="il-text"><strong>Submit Flood Reports</strong><span>Report flooding from your phone to help your community</span></div></div>
+            <div class="il-item"><span class="il-icon">🗺️</span><div class="il-text"><strong>Evacuation Routes</strong><span>Access pre-loaded evacuation and shelter maps offline</span></div></div>
+          </div>
+        </div>
+        <div class="reg-form">
+          <h3>Create Free Account</h3>
+          <p>Join thousands of Sierra Leoneans staying safe with FloodWatch SL.</p>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="fname">First Name</label>
+              <input type="text" id="fname" placeholder="First name" />
+              <span class="error-msg" id="fnameError"></span>
+            </div>
+            <div class="form-group">
+              <label for="lname">Last Name</label>
+              <input type="text" id="lname" placeholder="Last name" />
+              <span class="error-msg" id="lnameError"></span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="email">Email Address</label>
+            <input type="email" id="email" placeholder="your@email.com" />
+            <span class="error-msg" id="emailError"></span>
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input type="tel" id="phone" placeholder="+232 76 000 000" />
+            <span class="error-msg" id="phoneError"></span>
+          </div>
+          <div class="form-group">
+            <label for="district">Your District</label>
+            <select id="district">
+              <option value="">Select district</option>
+              <option>Western Area (Freetown)</option>
+              <option>Bombali (Makeni)</option>
+              <option>Bo</option><option>Kenema</option>
+              <option>Kono</option><option>Port Loko</option>
+              <option>Kambia</option><option>Tonkolili</option>
+              <option>Kailahun</option><option>Moyamba</option>
+              <option>Bonthe</option><option>Pujehun</option>
+              <option>Falaba</option><option>Karene</option>
+            </select>
+            <span class="error-msg" id="districtError"></span>
+          </div>
+          <div class="form-group">
+            <label for="role">Account Type</label>
+            <select id="role">
+              <option value="">Select type</option>
+              <option value="community">Community Member</option>
+              <option value="authority">Local Authority / NDMA</option>
+              <option value="ngo">NGO / Aid Organisation</option>
+              <option value="media">Media / Journalist</option>
+            </select>
+            <span class="error-msg" id="roleError"></span>
+          </div>
+          <button class="btn btn-teal full" onclick="handleRegister()" style="margin-top:4px;">Register for Alerts →</button>
+          <p class="form-note">Already registered? <a href="#" onclick="showModal('🔐 Login','Login feature coming soon.')">Log in</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="contact section" id="contact">
+    <div class="container">
+      <div class="contact-layout">
+        <div class="contact-left">
+          <div class="eyebrow">Contact</div>
+          <h2 class="section-title">Get In <span>Touch</span></h2>
+          <p>Contact the FloodWatch SL team for technical support, sensor installation requests, authority dashboard access, or media enquiries.</p>
+          <div class="cinfo-list">
+            <div class="cinfo-item"><span class="ci-ico">📍</span><div class="ci-text"><strong>Office</strong><span>Freetown, Western Area, Sierra Leone</span></div></div>
+            <div class="cinfo-item"><span class="ci-ico">📧</span><div class="ci-text"><strong>Email</strong><span>info@floodwatchsl.org</span></div></div>
+            <div class="cinfo-item"><span class="ci-ico">📞</span><div class="ci-text"><strong>Phone</strong><span>+232 76 300 000</span></div></div>
+            <div class="cinfo-item"><span class="ci-ico">🚨</span><div class="ci-text"><strong>Emergency</strong><span>999 (National) · 116 (Civil Defence) · 117 (Ambulance)</span></div></div>
+          </div>
+        </div>
+        <div class="cform">
+          <h3>Send a Message</h3>
+          <div class="form-group"><label for="cname">Full Name</label><input type="text" id="cname" placeholder="Your name" /></div>
+          <div class="form-group"><label for="cemail">Email</label><input type="email" id="cemail" placeholder="your@email.com" /></div>
+          <div class="form-group">
+            <label for="csubject">Subject</label>
+            <select id="csubject">
+              <option value="">Select subject</option>
+              <option>Sensor installation request</option>
+              <option>Authority dashboard access</option>
+              <option>Technical support</option>
+              <option>Media / press enquiry</option>
+              <option>Partnership / NGO</option>
+              <option>General question</option>
+            </select>
+          </div>
+          <div class="form-group"><label for="cmsg">Message</label><textarea id="cmsg" rows="4" placeholder="Describe your enquiry..."></textarea></div>
+          <button class="btn btn-teal full" onclick="handleContact()">Send Message →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-brand">
+          <div class="logo"><div class="logo-mark" style="margin-right:8px;">🌧</div><div class="logo-text">Flood<span>Watch</span> SL</div></div>
+          <p>Sierra Leone's flood monitoring and early warning platform — protecting communities before the water rises.</p>
+        </div>
+        <div class="footer-col">
+          <strong>Navigate</strong>
+          <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#alerts">Alert Levels</a></li>
+            <li><a href="#services">Features</a></li>
+            <li><a href="#districts">Districts</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <strong>Districts</strong>
+          <ul>
+            <li><a href="#">Western Area</a></li>
+            <li><a href="#">Bombali</a></li>
+            <li><a href="#">Bo</a></li>
+            <li><a href="#">Kenema</a></li>
+            <li><a href="#">Port Loko</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <strong>Emergency</strong>
+          <ul>
+            <li><a href="#">Call 999</a></li>
+            <li><a href="#">NDMA Contacts</a></li>
+            <li><a href="#">Shelter Locations</a></li>
+            <li><a href="#">Evacuation Routes</a></li>
+            <li><a href="#">Report a Flood</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>© 2026 FloodWatch SL. Built for Sierra Leone. 🇸🇱</p>
+        <div class="footer-status"><div class="live-dot"></div>All Systems Operational</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-box">
+      <div class="modal-icon" id="modalIcon">✅</div>
+      <h3 id="modalTitle">Done</h3>
+      <p id="modalMsg"></p>
+      <button class="btn btn-teal" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+
+  <script>
+// NAV
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => navbar.classList.toggle('scrolled', window.scrollY > 40));
+const hamburger = document.getElementById('hamburger');
+const navLinks = document.getElementById('navLinks');
+hamburger.addEventListener('click', () => {
+  navLinks.classList.toggle('open');
+  const spans = hamburger.querySelectorAll('span');
+  const open = navLinks.classList.contains('open');
+  spans[0].style.transform = open ? 'rotate(45deg) translate(4px,4px)' : '';
+  spans[1].style.opacity = open ? '0' : '';
+  spans[2].style.transform = open ? 'rotate(-45deg) translate(4px,-4px)' : '';
+});
+document.querySelectorAll('.nav-link').forEach(l => l.addEventListener('click', () => {
+  navLinks.classList.remove('open');
+  hamburger.querySelectorAll('span').forEach(s => { s.style.transform=''; s.style.opacity=''; });
+}));
+const sections = document.querySelectorAll('section[id]');
+const navItems = document.querySelectorAll('.nav-link');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => { if (window.scrollY >= s.offsetTop - 100) current = s.id; });
+  navItems.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + current));
+});
+
+// COUNTERS
+function animateCounter(el) {
+  const target = parseInt(el.dataset.target);
+  const step = target / (2000 / 16); let c = 0;
+  const t = setInterval(() => {
+    c += step;
+    if (c >= target) { el.textContent = target.toLocaleString() + '+'; clearInterval(t); }
+    else el.textContent = Math.floor(c).toLocaleString();
+  }, 16);
+}
+const cObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { animateCounter(e.target); cObs.unobserve(e.target); } });
+}, { threshold: 0.5 });
+document.querySelectorAll('.hc-num').forEach(el => cObs.observe(el));
+
+// MODAL
+function showModal(title, msg) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalMsg').textContent = msg;
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); }
+document.getElementById('modalOverlay').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+
+// SMS SIGNUP
+function handleSMS() {
+  const phone = document.getElementById('smsPhone').value.trim();
+  const district = document.getElementById('smsDistrict').value;
+  if (!phone || !district) { showModal('⚠️ Incomplete', 'Please enter your phone number and select your district.'); return; }
+  showModal('📲 SMS Alerts Activated!', `You will now receive free flood alerts for ${district} at ${phone}. Stay safe!`);
+  document.getElementById('smsPhone').value = '';
+  document.getElementById('smsDistrict').value = '';
+}
+
+// REGISTER
+function handleRegister() {
+  const fname = document.getElementById('fname').value.trim();
+  const lname = document.getElementById('lname').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const district = document.getElementById('district').value;
+  const role = document.getElementById('role').value;
+  ['fnameError','lnameError','emailError','phoneError','districtError','roleError'].forEach(id => document.getElementById(id).textContent = '');
+  let valid = true;
+  if (fname.length < 2) { document.getElementById('fnameError').textContent = 'Enter your first name.'; valid = false; }
+  if (lname.length < 2) { document.getElementById('lnameError').textContent = 'Enter your last name.'; valid = false; }
+  if (!email.includes('@') || !email.includes('.')) { document.getElementById('emailError').textContent = 'Enter a valid email address.'; valid = false; }
+  if (phone.length < 8) { document.getElementById('phoneError').textContent = 'Enter a valid phone number.'; valid = false; }
+  if (!district) { document.getElementById('districtError').textContent = 'Please select your district.'; valid = false; }
+  if (!role) { document.getElementById('roleError').textContent = 'Please select account type.'; valid = false; }
+  if (valid) {
+    showModal('✅ Registered!', `Welcome ${fname}! Your FloodWatch SL account is active. You will receive immediate alerts when flood levels rise in ${district}.`);
+    ['fname','lname','email','phone','district','role'].forEach(id => document.getElementById(id).value = '');
+  }
+}
+
+// CONTACT
+function handleContact() {
+  const name = document.getElementById('cname').value.trim();
+  const email = document.getElementById('cemail').value.trim();
+  const msg = document.getElementById('cmsg').value.trim();
+  if (!name || !email || !msg) { showModal('⚠️ Incomplete', 'Please fill in all required fields.'); return; }
+  showModal('✅ Message Sent', 'Thank you for contacting FloodWatch SL. Our team will respond within 24 hours.');
+  ['cname','cemail','csubject','cmsg'].forEach(id => document.getElementById(id).value = '');
+}
+
+// FADE IN
+const fObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.style.opacity='1'; e.target.style.transform='translateY(0)'; fObs.unobserve(e.target); } });
+}, { threshold: 0.1 });
+document.querySelectorAll('.svc-card,.district-card,.alert-card,.il-item,.cinfo-item,.tl-item,.w-card').forEach((el,i) => {
+  el.style.cssText += `opacity:0;transform:translateY(18px);transition:opacity 0.5s ease ${i*0.05}s,transform 0.5s ease ${i*0.05}s`;
+  fObs.observe(el);
+});
+  </script>
+</body>
+</html>
